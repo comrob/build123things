@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
         "build123d==0.2.0",
         "colored==2.2.3",
         "pystl",
-        "git+https://github.com/jdegenstein/jmwright-CQ-Editor"
+        "jmwright-CQ-Editor @ git+https://github.com/jdegenstein/jmwright-CQ-Editor"
     ],
 )
 
