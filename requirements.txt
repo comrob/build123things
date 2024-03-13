@@ -1,0 +1,7 @@
+cadquery
+cadquery-ocp
+build123d
+colored
+pytest
+pystl
+multipledispatch
