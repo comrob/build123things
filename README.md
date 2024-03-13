@@ -32,6 +32,12 @@ If CQ-editor won't render, try deleting `~/.config/CadQuery/CQ-editor.conf` or s
 So far, I do not know any better way than creating a new (mini)conda environment and installing it there.
 This library is not yet deployed in `pip`, the recommended way of installing is via the [VCS pip support](https://pip.pypa.io/en/stable/topics/vcs-support/).
 Ordinary system-wide installation tended to fail.
+The library was developed with Python 3.11.4.
+
+```
+conda create -n build123things python=3.11.4
+pip3 install git+https://github.com/comrob/build123things
+```
 
 ## Getting Started
 
@@ -48,6 +54,8 @@ class MyDesign (Thing):
 ```
 Here, we defined a cube design with a reference bounding sphere.
 Please, see examples provided with the library to learn about assemblies and more.
+Visualize the result via `cq-editor`.
+Export the designs using, e.g., ``python3 -m build123things.export.assembly_graph very_simple_car VerySimpleCar``.
 
 ## Scientific Publications
 

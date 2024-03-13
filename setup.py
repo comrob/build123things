@@ -31,6 +31,15 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
-    packages=['build123things', 'build123things.partlib'],
+    packages=['build123things', 'build123things.partlib', 'build123things.examples', 'build123things.export'],
     zip_safe=False,
+    install_requires=[
+        "cadquery==2.3.1",
+        "cadquery-ocp==7.7.0",
+        "build123d==0.2.0",
+        "colored==2.2.3",
+        "pystl",
+        "git+https://github.com/jdegenstein/jmwright-CQ-Editor"
+    ],
 )
+

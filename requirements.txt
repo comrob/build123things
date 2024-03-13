@@ -1,7 +1,6 @@
-cadquery
-cadquery-ocp
-build123d
-colored
-pytest
+cadquery==2.3.1
+cadquery-ocp==7.7.0
+build123d==0.2.0
+colored==2.2.3
 pystl
-multipledispatch
+git+https://github.com/jdegenstein/jmwright-CQ-Editor
