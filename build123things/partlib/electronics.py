@@ -2,7 +2,7 @@
 from warnings import warn
 import build123d as bd
 from build123things import MountPoint, Thing
-from build123things.materials import PCB, Aether
+from build123things.materials import PCB, Aether, MixedMaterial
 
 class SimpleFan (Thing):
     def __init__(self,
@@ -75,21 +75,24 @@ class L298n (Thing):
 
         # Outline and PCB
         self.pcb_sketch:bd.Sketch = bd.Sketch() + bd.Rectangle(height=height, width=width, align=bd.Align.CENTER)
-        self.pcb_mount_holes:bd.Sketch = bd.Sketch()
+        pcb_mount_holes:bd.Sketch = bd.Sketch()
         for x,y in ((1,1),(1,-1),(-1,1),(-1,-1)):
             x = x * hole_span/2
             y = y * hole_span/2
-            self.pcb_mount_holes += bd.Sketch() + bd.Location((x,y)) * bd.Circle(radius=hole_radius)
-        self.pcb = bd.extrude(self.pcb_sketch, amount=-pcb_thickness)
-        self.pcb -= bd.extrude(self.pcb_mount_holes, amount=-pcb_thickness)
+            pcb_mount_holes += bd.Sketch() + bd.Location((x,y)) * bd.Circle(radius=hole_radius)
+        self.pcb_mount_holes = pcb_mount_holes
+
+        pcb = bd.extrude(self.pcb_sketch, amount=-pcb_thickness)
+        pcb -= bd.extrude(self.pcb_mount_holes, amount=-pcb_thickness)
+        self.pcb = pcb
 
         self.chip = bd.Location((-width/2, -height/2)) * bd.Location((width-17.5/2,height/2,17.5/2)) * bd.Box(17.5, 30, 17.5)
         self.out1 = bd.Location((-width/2, -height/2)) * bd.Location((width-30,height-2.5,5)) * bd.Box(10, 5, 10)
         self.out2 = bd.Location((-width/2, -height/2)) * bd.Location((width-30,2.5,5)) * bd.Box(10, 5, 10)
         self.pwr = bd.Location((-width/2, -height/2)) * bd.Location((2.5,height-5-7.5,5)) * bd.Box(5, 15, 10)
-        self.mount_center = bd.Location((0,0,-pcb_thickness),(180,0,0))
+        self.mount_center = MountPoint(bd.Location((0,0,-pcb_thickness),(180,0,0)))
 
-        self.body = bd.Part() + [p[1] for p in self.enumerate_components_with_names(d0=False, d1=False, d2=False, d3=True)]
+        self.body = self.pcb + self.chip + self.out1 + self.out2 + self.pwr
 
     def result(self) -> bd.Part:
         return self.body
@@ -140,6 +143,8 @@ class LM2596 (Thing):
             cond_height = 10,
         ) -> None:
 
+        super().__init__(MixedMaterial())
+
         # Outline and PCB
         self.sketch_pcb:bd.Sketch = bd.Sketch() + bd.Rectangle(width=pcb_size_x, height=pcb_size_y, align=bd.Align.CENTER)
         self.sketch_mount_holes:bd.Sketch = bd.Sketch() + [bd.Location((x[0]*hole_span_x/2,x[1]*hole_span_y/2)) * bd.Circle(radius=hole_diameter/2) for x in ((1,-1),(-1,1))] # type: ignore
@@ -148,10 +153,12 @@ class LM2596 (Thing):
         self.pcb:bd.Part = bd.extrude(self.sketch_pcb - self.sketch_mount_holes, amount=-pcb_size_z)
         self.conds:bd.Part = bd.extrude(self.sketch_conds, amount=cond_height)
 
-        self.mount_center:bd.Location = bd.Location((0,0,-pcb_size_z),(180,0,90))
+        self.mount_center = MountPoint(bd.Location((0,0,-pcb_size_z),(180,0,90)))
+
+        self.body = self.pcb + self.conds
 
     def result(self) -> bd.Part:
-        return bd.Part() + [p[1] for p in self.enumerate_components_with_names(d0=False, d1=False, d2=False, d3=True)]
+        return self.body
 
 class DF62 (Thing):
     """ A three-way terminal block. """
@@ -167,6 +174,7 @@ class DF62 (Thing):
             hole_size_z = 5,
             hole_mass_diameter = 6,
         ) -> None:
+        super().__init__(MixedMaterial())
 
         # Outline and PCB
         self.sketch:bd.Sketch = bd.Sketch() + \
@@ -185,7 +193,7 @@ class DF62 (Thing):
 
         self.body = bd.extrude(self.sketch, amount=size_z) + bd.extrude(self.sketch_around_holes, amount=hole_size_z)
 
-        self.mount_center = bd.Location((0,0,0),(180,0,90))
+        self.mount_center = MountPoint(bd.Location((0,0,0),(180,0,90)))
 
     def result(self) -> bd.Part:
         return self.body
@@ -226,7 +234,7 @@ class RaspberryPiZeroWH (Thing):
             bd.extrude(self.sketch_csi2,amount=1)
         )
 
-        self.mount_center:bd.Location = bd.Location((x_size/2,y_size/2,-pcb_thickness),(180,0,0))
+        self.mount_center = MountPoint(bd.Location((x_size/2,y_size/2,-pcb_thickness),(180,0,0)))
 
     def result(self) -> bd.Part:
         return self.body

@@ -54,7 +54,7 @@ def export(thing:Thing, target_dir:Path):
         stl_file = target_dir / (mesh_name + ".stl")
         stl_file.parent.mkdir(exist_ok=True, parents=True)
         if res is not None:
-            res.scale(0.001).export_stl(str(stl_file))
+            res.export_stl(str(stl_file))
         for mounted_as, transform_resolver in thing.enumerate_assembly():
             process(transform_resolver._wrapped)
 

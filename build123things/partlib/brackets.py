@@ -15,6 +15,7 @@ import build123things
 class BracketRotorBody (Thing):
     def __init__(self,
             distance_between_rotors = 60,
+            thickness = 4,
         )->None:
 
         super().__init__(material=PETG())
@@ -33,7 +34,7 @@ class BracketRotorBody (Thing):
             bd.Circle(radius=8.5/2)# -
             #[bd.Location((0,0,0),(0,0,a*45)) * bd.Location((8,0,0)) * bd.Circle(radius=2.5/2) for a in range(8)] # type: ignore
         )
-        a:bd.Part = bd.extrude(self.sketch_attach_rotor, amount=3)
+        a:bd.Part = bd.extrude(self.sketch_attach_rotor, amount=thickness)
 
         # Exemplary reference geometries.
         self.servo_by_body_ref_screw_1 = servo_by_body_ref.screw_right_top_rear()
@@ -74,7 +75,7 @@ class BracketRotorBody (Thing):
             bd.Rectangle(width=10,height=15)
             #bd.Rectangle(width=34,height=40/2,align=[bd.Align.CENTER,bd.Align.MIN])
         )
-        b:bd.Part = bd.extrude(self.sketch_attach_body, amount=3)
+        b:bd.Part = bd.extrude(self.sketch_attach_body, amount=thickness)
 
         self.path = bd.Curve() + bd.Spline(
             (0,25/2,loc_rotor.position.Z),
