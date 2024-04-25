@@ -30,7 +30,7 @@ NAMESPACE_SEPARATOR = ":"
 
 HACK_MINIMAL_INERTIA = "0.00001"
 
-def export(thing:Thing, target_dir:Path):
+def export(thing:Thing, target_dir:Path, fmt:str):
     """ """
 
     thing_instance_counter:dict[int,int] = defaultdict(int)
@@ -51,10 +51,15 @@ def export(thing:Thing, target_dir:Path):
         # Start with exporting the mesh.
         mesh_name = thing.codename()
         res = thing.result()
-        stl_file = target_dir / (mesh_name + ".stl")
+        stl_file = target_dir / (mesh_name + "." + fmt)
         stl_file.parent.mkdir(exist_ok=True, parents=True)
         if res is not None:
-            res.export_stl(str(stl_file))
+            if fmt == "stl":
+                res.export_stl(str(stl_file))
+            elif fmt in ("stp", "step"):
+                res.export_step(str(stl_file))
+            else:
+                raise ValueError()
         for mounted_as, transform_resolver in thing.enumerate_assembly():
             process(transform_resolver._wrapped)
 
@@ -68,6 +73,7 @@ if __name__ == "__main__":
     argp = argparse.ArgumentParser(description="Export a Thing to ")
     argp.add_argument("module", help="Identify the module containing the thing.")
     argp.add_argument("thing", help="Identify the thing in the module.")
+    argp.add_argument("--format", "-f", choices=("stl", "step"), help="Format to export to.")
     argp.add_argument("--param-file", "-p", default=None, type=Path, help="Yaml file containing args and kwargs to pass to thing constructor. Expects two documents (separated by ---) in the file, the first with array (args) and the second with dict (kwargs).")
     argp.add_argument("--target-dir", "-d", default=None, type=Path, help="Target directory.")
     args = argp.parse_args()
@@ -85,4 +91,4 @@ if __name__ == "__main__":
         target_dir:Path = args.target_dir
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    export(thing, target_dir)
+    export(thing, target_dir, args.format)
