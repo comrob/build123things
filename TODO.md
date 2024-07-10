@@ -1,5 +1,8 @@
 This file contains gathered ideas which could be one day opened in the issue tracker.
 
+# MuJoCo export joints use pos properly.
+Should resolve currently used hack with zero-mass virtual body.
+
 # Assemble to Nested Mount Points.
 
 Currently, the mount points need to be "brought" to the Thing's reference frame in order to be used in assembly.
