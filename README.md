@@ -17,9 +17,9 @@ With the library, semantically related `build123d` objects are groupped in `Thin
     - Thing parameters are annotated and assume meaning on their own.
     - Joints have extensible semantics with arbitrary joint transform parametrization.
 - Cloning existing complex geometry with incrementally adjusted parameters.
-- Safety checks all around not to accidentaly mess things up.
+- Safety checks all around not to accidentally mess things up.
 - Modular exporting of all subcomponents to STL, MuJoCo files or assembly graphs.
-- Vizualization utilities to distinguish different subcomponents
+- Visualization utilities to distinguish different subcomponents
 
 The library may be seen as a distillation of conventions.
 Of course everyone may break this library easily by hacking the internals of provided classes.
@@ -60,5 +60,5 @@ Export the designs using, e.g., ``python3 -m build123things.export.assembly_grap
 ## Scientific Publications
 
 This library is a considered a supplementary material for a manuscript submitted for the The 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS 2024).
-In case of acceptance, we will provide here a preffered bibtex record.
+In case of acceptance, we will provide here a preferred bibtex record.
 
