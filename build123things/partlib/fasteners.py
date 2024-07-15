@@ -60,6 +60,14 @@ class Screw (Thing):
             length = self.p.length
         return bd.extrude(bd.Circle(radius=(self.p.width + wall_thickness)/2), amount=length) # type: ignore
 
+    def adjust_fdm_cutin(self):
+        """ Returns a Thing useful for subtracting, such that in practice the screw can cut in the FDM-printed mass."""
+        return self.adjust(width__add=0.15)
+
+    def adjust_fdm_clear(self):
+        """ Returns a Thing useful for subtracting, such that in practice the screw goes smoothly through the FDM-printed mass."""
+        return self.adjust(width__add=0.3)
+
 class MetricScrew(Screw):
     def __init__(self, width:float, length:float, head_type:str="hex_outer", material:Material=Steel()) -> None:
         super().__init__(
