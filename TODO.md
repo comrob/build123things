@@ -184,3 +184,6 @@ Altough I found Python libraries for this purpose, still, after all, I gave up f
 # Manufacturing Hints.
 
 An annotation which states, e.g., how the Thing should be 3D printed, from which material, ...
+
+# GUI with explicit dependency and reference geometry visualization and management.
+
