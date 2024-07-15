@@ -25,6 +25,7 @@ import inspect
 from .materials import Material
 import os
 from stl import mesh
+from warnings import warn
 
 MOUNTING_LOCATION:bd.Location = bd.Location((0,0,0),(180,0,90))
 
@@ -258,7 +259,7 @@ class Thing (ABC, metaclass=ThingMeta):
                 self.__dict__[Thing.CAPTURED_PARAMETER_ATTRIBUTE_NAME] = []
             self.__dict__[Thing.CAPTURED_PARAMETER_ATTRIBUTE_NAME].append((cls, bound.arguments))
             return captured_init(self, *args, **kwargs )
-        cls.__init__ = __init__ # type: ignore
+        cls.__init__ = __init__
         return super().__init_subclass__()
 
     def __init__(self, material:Material) -> None:
@@ -302,10 +303,10 @@ class Thing (ABC, metaclass=ThingMeta):
 
     @final
     def __setattr__(self, __name: str, __value: Any) -> None:
-        assert __name.isidentifier()
+        assert __name.isidentifier(), f"Name {colored.Fore.red}{__name}{colored.Style.reset} is not an identifier."
         if __name in dir(self):
             raise AttributeError(f"Attribute {__name} cannot be reassigned. Instantiate a new Thing by `new_altered` method if you need to modify it.")
-        elif inspect.stack()[1].function not in ("__init__"):
+        elif not(inspect.stack()[1].function == "__init__" or (inspect.stack()[1].function == "__setitem__" and inspect.stack()[2].function == "__init__")):
             raise AttributeError("You can assign only during __init__.")
         #elif __name == Thing.CAPTURED_PARAMETER_ATTRIBUTE_NAME:
         #    assert isinstance(__value, ConstNamespace), f"Property `{__name}` is reserved for storing constructor parameters."
@@ -330,6 +331,19 @@ class Thing (ABC, metaclass=ThingMeta):
                 code_context = "<code context not available>"
             print(f" {colored.Fore.rgb(100,100,100)}\\_> ...{inspect.stack()[1].filename[-20:]}:{inspect.stack()[1].lineno}   {code_context}{colored.Style.reset}")
         self.__dict__[__name] = __value
+
+    @staticmethod
+    def name_mangler(__name:str)->str:
+        """ When dynamically assigning with integer-containing names, minus signs are good to   """
+        return __name.replace("-", "_")
+
+    def __setitem__(self, __name, __value):
+        """ Convenience shorthand for dynamically-created properties. """
+        self.__setattr__(Thing.name_mangler(__name), __value)
+
+    def __getitem__(self, __name):
+        """ Convenience shorthand for dynamically-created properties. """
+        return getattr(self, Thing.name_mangler(__name))
 
     @final
     def __getattribute__(self, __name:str) -> Any:
@@ -813,11 +827,13 @@ class TransformResolver:
 
     @property
     def location(self) -> bd.Location:
-        """ TODO: This resolves the primary mount. So far, this is not quite systematic. """
-        return self.transform * self._orig_mount.location
+        """ Alias to `self._transform`. """
+        warn("The semantics of this property is not clear. It may lead to unexpected behavior. Please report your usage of this property such it can be fixed.")
+        return self._transform# * self._orig_mount.location
 
     @property
     def transform(self) -> bd.Location:
+        """ The cummulative transform. Alias to `self._transform`. """
         return self._transform
 
     @property
