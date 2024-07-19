@@ -14,7 +14,7 @@ from pathlib import Path
 import inspect
 
 DEBUG:Set[str] = set()
-DEBUG.add("memoize")
+#DEBUG.add("memoize")
 MEMOIZATION_CACHE = dict()
 
 def random_tmp_fname(ext:str, where:str="/tmp/", k:int=10, alphabet:str=string.ascii_uppercase + string.digits):

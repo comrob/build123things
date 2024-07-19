@@ -1,5 +1,14 @@
 This file contains gathered ideas which could be one day opened in the issue tracker.
 
+# A collection-like attribute results in double transform.
+Having a Thing which aggregates some of its (mounted!) properties in a list-like property (or generator) makes subsequent accesses to such listed properties (through this list) receiving the transform twice.
+
+# Memoization is a key tool used in the library, yet is currently extremly naive and inefficient.
+Some day it would be nice to improve the string-based current approach.
+
+# How to systematically access location of mount points?
+- When accessed, a TransformResolver is returned. However, there is no
+
 # MuJoCo export joints use pos properly.
 Should resolve currently used hack with zero-mass virtual body.
 

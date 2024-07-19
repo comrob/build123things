@@ -36,6 +36,7 @@ DEBUG:Set[str] = set()
 #DEBUG.add("Thing.__getattr__")
 #DEBUG.add("Thing.adjust")
 #DEBUG.add("TransformResolver.__getattr__")
+#DEBUG.add("MountPoint.__init__")
 
 
 class ThingMeta (ABCMeta):
@@ -88,6 +89,8 @@ class MountPoint:
         assert isinstance(location, bd.Location), str(location) + str(type(location))
         assert isinstance(owner, Thing|None)
         assert isinstance(known_as, str|None)
+        if "MountPoint.__init__" in DEBUG:
+            print(f"Thing.__init__ {repr(self)} with {location}")
 
         self._owner:Thing|None = owner
         """ A thing instance for which this mount point is defined. """
@@ -827,9 +830,9 @@ class TransformResolver:
 
     @property
     def location(self) -> bd.Location:
-        """ Alias to `self._transform`. """
-        warn("The semantics of this property is not clear. It may lead to unexpected behavior. Please report your usage of this property such it can be fixed.")
-        return self._transform# * self._orig_mount.location
+        """ Alias to `self._transform`. But may be also used for self._orig_mount.location """
+        #warn("The semantics of this property is not clear. It may lead to unexpected behavior. Please report your usage of this property such it can be fixed.")
+        return self._transform * self._orig_mount.location
 
     @property
     def transform(self) -> bd.Location:
@@ -864,7 +867,8 @@ class TransformResolver:
         elif callable(__value):
             def proxy (*args, **kwargs):
                 result = __value(*args, **kwargs)
-                print(f"{colored.Fore.cyan}{repr(self)}{colored.Style.reset} . {colored.Fore.green}{__name} PROXY CALL{colored.Style.reset} -> {colored.Fore.red}{repr(result)}{colored.Style.reset}")
+                if "TransformResolver.__getattr__" in DEBUG:
+                    print(f"{colored.Fore.cyan}{repr(self)}{colored.Style.reset} . {colored.Fore.green}{__name} PROXY CALL{colored.Style.reset} -> {colored.Fore.red}{repr(result)}{colored.Style.reset}")
                 if isinstance(result, Thing):
                     #raise NotImplementedError(f"!!!")
                     return ReferenceTransformResolver(result, self.transform, self.previous)
@@ -884,6 +888,8 @@ class TransformResolver:
         elif isinstance(__value, bd.Location):
             return self.transform * copy.copy(__value)
         else:
+            if "TransformResolver.__getattr__" in DEBUG:
+                print(f"{colored.Fore.rgb(100,100,100)} \\> direct return {colored.Style.reset}")
             return __value
 
     def __str__(self) -> str:
