@@ -3,6 +3,11 @@ from warnings import warn
 import build123d as bd
 from build123things import MountPoint, Thing
 from build123things.materials import PCB, Aether, MixedMaterial
+from build123d import Location as L
+from build123things import MountPoint as M
+MIN = bd.Align.MIN
+MAX = bd.Align.MAX
+CEN = bd.Align.CENTER
 
 class SimpleFan (Thing):
     def __init__(self,
@@ -64,77 +69,128 @@ class L298n (Thing):
     """ Dual H-bridge. """
 
     def __init__(self,
-            width = 43,
-            height = 43,
-            pcb_thickness = 2,
+            size_x = 43, # PCB size
+            size_y = 43, # PCB size
+
+            pcb_size_z= 2, # PCB thickness
+            pcb_size_z_below = 2, # Wires and parts protruding below PCB
+
+            heatsink_size_x = 16, # with added tolerance
+            heatsink_size_y = 23.5, # with added tolerance
+            heatsink_size_z = 25, # with added tolerance
+
+            parts_size_z = 10.5, # with added tolerance
+
             hole_span = 37,
             hole_radius = 1.7,
         ) -> None:
 
-        super().__init__(Aether())
+        super().__init__(MixedMaterial())
 
-        # Outline and PCB
-        self.pcb_sketch:bd.Sketch = bd.Sketch() + bd.Rectangle(height=height, width=width, align=bd.Align.CENTER)
-        pcb_mount_holes:bd.Sketch = bd.Sketch()
+        # Sketches
+        self.sketch_pcb_xy:bd.Sketch = bd.Sketch() + bd.Rectangle(size_x, size_y)
+        sketch_pcb_holes_xy:bd.Sketch = bd.Sketch()
         for x,y in ((1,1),(1,-1),(-1,1),(-1,-1)):
             x = x * hole_span/2
             y = y * hole_span/2
-            pcb_mount_holes += bd.Sketch() + bd.Location((x,y)) * bd.Circle(radius=hole_radius)
-        self.pcb_mount_holes = pcb_mount_holes
+            sketch_pcb_holes_xy += bd.Sketch() + bd.Location((x,y)) * bd.Circle(radius=hole_radius)
+        self.sketch_pcb_holes_xy = sketch_pcb_holes_xy
+        self.sketch_heatsink_xy = L((-size_x/2,0)) * bd.Rectangle(heatsink_size_x, heatsink_size_y, align=(MIN,CEN))
+        self.sketch_parts = bd.Rectangle(size_x-1, size_y-1)
 
-        pcb = bd.extrude(self.pcb_sketch, amount=-pcb_thickness)
-        pcb -= bd.extrude(self.pcb_mount_holes, amount=-pcb_thickness)
-        self.pcb = pcb
+        self.sketch_parts_xz = L((0,0,0),(-90,0,0)) * (
+                bd.Rectangle(size_x, pcb_size_z+pcb_size_z_below, align=(CEN,MIN))
+                + bd.Rectangle(size_x, parts_size_z, align=(CEN,MAX))
+        )
+        self.sketch_full_xz = L((0,0,0),(-90,0,0)) * (
+                bd.Rectangle(size_x, pcb_size_z+pcb_size_z_below, align=(CEN,MIN))
+                + bd.Rectangle(size_x, parts_size_z, align=(CEN,MAX))
+                + L((-size_x/2,0)) * bd.Rectangle(heatsink_size_x, heatsink_size_z, align=(MIN,MAX))
+        )
 
-        self.chip = bd.Location((-width/2, -height/2)) * bd.Location((width-17.5/2,height/2,17.5/2)) * bd.Box(17.5, 30, 17.5)
-        self.out1 = bd.Location((-width/2, -height/2)) * bd.Location((width-30,height-2.5,5)) * bd.Box(10, 5, 10)
-        self.out2 = bd.Location((-width/2, -height/2)) * bd.Location((width-30,2.5,5)) * bd.Box(10, 5, 10)
-        self.pwr = bd.Location((-width/2, -height/2)) * bd.Location((2.5,height-5-7.5,5)) * bd.Box(5, 15, 10)
-        self.mount_center = MountPoint(bd.Location((0,0,-pcb_thickness),(180,0,0)))
+        self.sketch_parts_yz = L((0,0,0),(0,-90,0)) * (
+                bd.Rectangle(pcb_size_z+pcb_size_z_below,size_y,align=(MAX,CEN))
+                + bd.Rectangle(parts_size_z,size_y,align=(MIN,CEN))
+                + bd.Rectangle(8,size_y+6,align=(MIN,CEN)) # For cables
+        )
+        self.sketch_full_yz = L((0,0,0),(0,-90,0)) * (
+                bd.Rectangle(pcb_size_z+pcb_size_z_below,size_y,align=(MAX,CEN))
+                + bd.Rectangle(parts_size_z,size_y,align=(MIN,CEN))
+                + bd.Rectangle(heatsink_size_z,heatsink_size_y,align=(MIN,CEN))
+        )
 
-        self.body = self.pcb + self.chip + self.out1 + self.out2 + self.pwr
+        self.mount_bottom = M(L((0,0,-pcb_size_z-pcb_size_z_below),(180,0,90)))
+        self.mount_heatsink = M(L((-size_x/2, 0, heatsink_size_z/2), (0,-90,0)))
+        self.mount_heatsink_bottom = M(L((-size_x/2, 0, -pcb_size_z-pcb_size_z_below), (0,-90,0)))
+
+        self.body = bd.Part() \
+                + bd.extrude(self.sketch_pcb_xy, amount=-pcb_size_z-pcb_size_z_below) \
+                + bd.extrude(self.sketch_pcb_xy, amount=parts_size_z) \
+                + bd.extrude(self.sketch_heatsink_xy, amount=heatsink_size_z) \
+                - bd.extrude(self.sketch_pcb_holes_xy, amount=heatsink_size_z, both=True) \
 
     def result(self) -> bd.Part:
         return self.body
 
 class StepUp150W (Thing):
     def __init__(self,
-            x_size_pcb = 65,
-            x_size_heatsink = 42,
+            x_size_pcb = 65+0.5,
+            x_size_heatsink = 46.5+1,
             y_size_pcb = 37,
             y_size_heatsink = 10,
             z_size_heatsink = 20,
-            y_spacing_heatsink = 22,
+            y_spacing_heatsink = 27.32,
             x_hole_span = 59,
             y_hole_span = 27,
             hole_diameter = 3.2,
-            pcb_thickness = 1.7,
+            pcb_thickness = 1.7+3,
             x_size_ports = 7.5,
             y_size_ports = 5,
             z_size_ports = 10,
         ) -> None:
+
+        super().__init__(MixedMaterial())
+
+        self.size_z = z_size_heatsink + pcb_thickness
+        self.size_width = y_spacing_heatsink+2*y_size_heatsink
 
         # Outline and PCB
         self.sketch_pcb:bd.Sketch = bd.Sketch() + bd.Rectangle(width=x_size_pcb, height=y_size_pcb, align=bd.Align.CENTER)
         self.sketch_mount_holes:bd.Sketch = bd.Sketch() + [bd.Location((x[0]*x_hole_span/2,x[1]*y_hole_span/2)) * bd.Circle(radius=hole_diameter/2) for x in ((1,1),(1,-1),(-1,1),(-1,-1))] # type: ignore
         self.sketch_heatsinks:bd.Sketch = bd.Sketch() + [bd.Location((0,a*(y_spacing_heatsink/2+y_size_heatsink/2))) * bd.Rectangle(width=x_size_heatsink, height=y_size_heatsink) for a in (-1,1)] # type: ignore
         self.sketch_ports:bd.Sketch = [bd.Location((-x_size_pcb/2+x_size_ports/2,a*y_size_ports)) * bd.Rectangle(width=x_size_ports, height=y_size_ports) for a in (-.5,-1.5,.5,1.5)] # type: ignore
+        self.sketch_full_yz = L((0,0,0),(90,90,0)) * (bd.Sketch() +
+                bd.Rectangle(y_size_pcb, pcb_thickness, align=(CEN,MAX)) + bd.Rectangle(y_spacing_heatsink + y_size_heatsink*2, z_size_heatsink, align=(CEN,MIN))
+            )
+        self.sketch_noconn_xz = L((0,0,0),(90,0,0)) * (bd.Sketch() +
+                bd.Rectangle(x_size_pcb, pcb_thickness, align=(CEN,MAX)) + bd.Rectangle(x_size_heatsink, z_size_heatsink, align=(CEN,MIN))
+            )
+        self.sketch_full_xz = L((0,0,0),(90,0,0)) * (bd.Sketch() +
+                bd.Rectangle(x_size_pcb, pcb_thickness, align=(CEN,MAX))
+                + bd.Rectangle(x_size_heatsink, z_size_heatsink, align=(CEN,MIN))
+                + bd.Rectangle(x_size_pcb, z_size_ports, align=(CEN,MIN))
+                + L((-x_size_pcb/2,0)) * bd.Rectangle(3, 7, align=(MAX,MIN)) # Cable space.
+            )
 
         self.pcb:bd.Part = bd.extrude(self.sketch_pcb - self.sketch_mount_holes, amount=-pcb_thickness)
         self.heatsinks:bd.Part = bd.extrude(self.sketch_heatsinks, amount=z_size_heatsink)
         self.ports:bd.Part = bd.extrude(bd.Sketch() + self.sketch_ports, amount=z_size_ports) # type: ignore
 
-        self.mount_center:bd.Location = bd.Location((0,0,-pcb_thickness),(180,0,90))
+        self.mount_center = MountPoint(bd.Location((0,0,-pcb_thickness),(180,0,90)))
+        self.mount_side_1 = MountPoint(bd.Location((0,+(y_size_heatsink+y_spacing_heatsink/2),(-pcb_thickness+z_size_heatsink)/2),(-90,0,-90)))
+        self.mount_side_2 = MountPoint(bd.Location((0,-(y_size_heatsink+y_spacing_heatsink/2),(-pcb_thickness+z_size_heatsink)/2),(90,0,90)))
+
+        self.body = self.pcb + self.heatsinks + self.ports
 
     def result(self) -> bd.Part:
-        return bd.Part() + [p[1] for p in self.enumerate_components_with_names(d0=False, d1=False, d2=False, d3=True)]
+        return self.body
 
 class LM2596 (Thing):
     """ Step-Down power convertor. """
     def __init__(self,
             pcb_size_x = 44,
             pcb_size_y = 22,
-            pcb_size_z = 1.5,
+            pcb_size_z = 1.5+3,
             hole_span_x = 30,
             hole_span_y = 15,
             hole_diameter = 3.2,
@@ -149,13 +205,23 @@ class LM2596 (Thing):
         self.sketch_pcb:bd.Sketch = bd.Sketch() + bd.Rectangle(width=pcb_size_x, height=pcb_size_y, align=bd.Align.CENTER)
         self.sketch_mount_holes:bd.Sketch = bd.Sketch() + [bd.Location((x[0]*hole_span_x/2,x[1]*hole_span_y/2)) * bd.Circle(radius=hole_diameter/2) for x in ((1,-1),(-1,1))] # type: ignore
         self.sketch_conds:bd.Sketch = bd.Sketch() + [bd.Location((a*(cond_span/2), 0)) * bd.Circle(radius=cond_diam/2) for a in (-1,1)] # type: ignore
+        self.sketch_xz = bd.Location((0,0,0),(-90,0,0)) * (
+                bd.Rectangle(pcb_size_x, pcb_size_z, align=(CEN,MIN))
+                + bd.Rectangle(pcb_size_x, cond_height, align=(CEN,MAX))
+                #+ bd.Rectangle(pcb_size_x-20, cond_height+1.5, align=(CEN,MAX))
+                )
 
         self.pcb:bd.Part = bd.extrude(self.sketch_pcb - self.sketch_mount_holes, amount=-pcb_size_z)
         self.conds:bd.Part = bd.extrude(self.sketch_conds, amount=cond_height)
 
         self.mount_center = MountPoint(bd.Location((0,0,-pcb_size_z),(180,0,90)))
+        self.mount_front = MountPoint(bd.Location((pcb_size_x/2,0,cond_height/2),(0,90,-90)))
+        self.mount_right = MountPoint(bd.Location((0,pcb_size_y/2,cond_height/2),(90,0,-90)))
+        self.mount_right_bottom = MountPoint(bd.Location((0,pcb_size_y/2,-pcb_size_z),(90,0,-90)))
 
         self.body = self.pcb + self.conds
+
+        self.hull = self.pcb + bd.extrude(self.sketch_pcb, amount=cond_height)
 
     def result(self) -> bd.Part:
         return self.body
@@ -200,30 +266,31 @@ class DF62 (Thing):
 
 class RaspberryPiZeroWH (Thing):
     def __init__(self,
-            x_size=65,
-            y_size=30,
+            size_x=65,
+            size_y=30,
             mount_hole_offset=3.5,
             mount_hole_diameter=2.7,
-            pcb_thickness=1.5,
+            pcb_thickness=1.5+2, # also with extended wires and parts below
         ) -> None:
         super().__init__(material=PCB())
 
         hole_locations = (
-                (mount_hole_offset,mount_hole_offset),(x_size-mount_hole_offset,mount_hole_offset),(mount_hole_offset,y_size-mount_hole_offset),(x_size-mount_hole_offset,y_size-mount_hole_offset))
+                (mount_hole_offset,mount_hole_offset),(size_x-mount_hole_offset,mount_hole_offset),(mount_hole_offset,size_y-mount_hole_offset),(size_x-mount_hole_offset,size_y-mount_hole_offset))
 
         self.sketch_mount_holes:bd.Sketch = bd.Sketch() + [bd.Location((x[0],x[1])) * bd.Circle(radius=mount_hole_diameter/2) for x in hole_locations] # type: ignore
 
         self.sketch_base:bd.Sketch = (
-            bd.Sketch() + bd.fillet(bd.Rectangle(width=x_size, height=y_size, align=bd.Align.MIN).vertices(),radius=3) -
+            bd.Sketch() + bd.fillet(bd.Rectangle(width=size_x, height=size_y, align=bd.Align.MIN).vertices(),radius=3) -
             self.sketch_mount_holes
         )
 
-        self.sketch_gpio:bd.Sketch = bd.Sketch() + bd.Location((x_size/2,y_size-mount_hole_offset)) * bd.Rectangle(width=52,height=5)
+        self.sketch_gpio:bd.Sketch = bd.Sketch() + bd.Location((size_x/2,size_y-mount_hole_offset)) * bd.Rectangle(width=52,height=5)
         self.sketch_usb1:bd.Sketch = bd.Sketch() + bd.Location((41.4,3)) * bd.Rectangle(width=7.5,height=6)
-        self.sketch_usb2:bd.Sketch = bd.Sketch() + bd.Location((54.0,3)) * bd.Rectangle(width=7.5,height=6)
+        self.location_usb_2 = bd.Location((54.0,3), (0,0,0))
+        self.sketch_usb2:bd.Sketch = bd.Sketch() + self.location_usb_2 * bd.Rectangle(width=7.5,height=6)
         self.sketch_hdmi:bd.Sketch = bd.Sketch() + bd.Location((12.4,3.75)) * bd.Rectangle(width=11,height=7.5)
         self.sketch_sdcard:bd.Sketch = bd.Sketch() + bd.Location((6,16.9)) * bd.Rectangle(width=16,height=12)
-        self.sketch_csi2:bd.Sketch = bd.Sketch() + bd.Location((x_size-1.5,15)) * bd.Rectangle(width=4,height=17)
+        self.sketch_csi2:bd.Sketch = bd.Sketch() + bd.Location((size_x-1.5,15)) * bd.Rectangle(width=4,height=17)
 
         self.body:bd.Part = (
             bd.extrude(self.sketch_base,amount=-1.5) +
@@ -234,18 +301,25 @@ class RaspberryPiZeroWH (Thing):
             bd.extrude(self.sketch_csi2,amount=1)
         )
 
-        self.mount_center = MountPoint(bd.Location((x_size/2,y_size/2,-pcb_thickness),(180,0,0)))
+        self.sketch_outline_yz = L((0,0,0),(0,-90,0)) * (bd.Sketch()
+            + bd.Rectangle(-pcb_thickness,size_y+1,align=(MAX,MIN))
+            + bd.Rectangle(.5,size_y+1,align=(MIN,MIN))
+            + bd.Rectangle(2,.5,align=(MAX,MAX))
+            + bd.Rectangle(4,size_y,align=(MIN,MIN))
+            + L((0,size_y-mount_hole_offset)) * bd.Rectangle(10,6,align=(MIN,CEN))
+            + L((0,0)) * bd.Rectangle(4,1.5,align=(MIN,MAX))
+            + L((0,0)) * bd.Rectangle(.5,1.5,align=(MAX,MAX))
+        )
+
+        self.mount_center = MountPoint(bd.Location((size_x/2,size_y/2,-pcb_thickness),(180,0,0)))
+        self.mount_csi = MountPoint(bd.Location((0,size_y/2,0),(-90,-90,0)))
 
     def result(self) -> bd.Part:
         return self.body
 
-if "show_object" in globals().keys():
-    #r = RaspberryPi4B()
-    #r = SimpleFan()
-    r = RaspberryPiZeroWH()
-    #r = LM2596()
-    #r = StepUp150W()
-    #r = DF62()
-
-    r.show_everything(show_object) #type:ignore
+from build123things.show import show
+#x = StepUp150W()
+x = LM2596()
+#x = L298n()
+#x = RaspberryPiZeroWH()
 
