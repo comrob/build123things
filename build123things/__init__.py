@@ -390,9 +390,14 @@ class Thing (ABC, metaclass=ThingMeta):
         Memoization ensures, that if a user asks several times for the same modification of a Thing, the very same instance is returned. This is in-line with the assembly DAG.
 
         User may select which class the arguments are to be applied to. If None, such class is attempted to be found automatically.
+
+        TODO/NOTE: So far, one may alter only parameters among one particular class. If you want to alter parameters which were defined both in some derived class and in its base class, you should call adjust twice.
+
+        FIXME: The resolution mechanism is broken. You don't want to get base class if you adjust some base-class-defined parameter. The resolution has to be deeply reworked. Currently, this can be overcame by enumerating the alterable parametes in the derived classes (hence, however, not being DRY) or maybe trying kwargs.
         """
         captured_param_list = getattr(self, Thing.CAPTURED_PARAMETER_ATTRIBUTE_NAME)
         if cls is None:
+            #print(f"Resolving implicitly.")
             def arg_basename(arg_name:str):
                 fnd = arg_name.find("__")
                 return arg_name, arg_name[:fnd] if fnd > 0 else arg_name
@@ -406,10 +411,15 @@ class Thing (ABC, metaclass=ThingMeta):
                         raise ArgumentError(f"Cannot Adjust Requested Thing with Expression {origname}. The adjusted type {type(self)} might not have pure constructor. Or such constructor argument did not exist at all.")
             cls = captured_param_list[resolved_index][0]
         else:
+            found = False
             resolved_index = 0
+            #print(f"Want to resolve explicitly by {cls}.")
             for resolved_index, (cls_candidate, _) in enumerate(captured_param_list):
                 if cls is cls_candidate:
+                    found = True
+                    print(f"Resolving as {cls_candidate}.")
                     break
+            assert found, f"Cannot find requested adjust-bace class {cls} among captured_param_list of {self}."
         params = copy.copy(captured_param_list[resolved_index][1])
         if "self" in params:
             del params["self"]
@@ -448,13 +458,13 @@ class Thing (ABC, metaclass=ThingMeta):
             for name in params.keys():
                 params[name] *= mul_all
         if "Thing.adjust" in DEBUG:
-            print(f"{colored.Fore.cyan}{repr(self)}{colored.Style.reset} . {colored.Fore.light_green}adjust({colored.Fore.red}{kwargs}{colored.Fore.light_green}){colored.Style.reset} as {colored.Fore.red}{cls}{colored.Style.reset}")
-            print(f" - new params: {colored.Fore.dark_green}{params}{colored.Style.reset}")
+            #print(f"{colored.Fore.cyan}{repr(self)}{colored.Style.reset} . {colored.Fore.light_green}adjust({colored.Fore.red}{kwargs}{colored.Fore.light_green}){colored.Style.reset} as {colored.Fore.red}{cls}{colored.Style.reset}")
+            #print(f" - new params: {colored.Fore.dark_green}{params}{colored.Style.reset}")
             try:
                 code_context = inspect.stack()[1].code_context[0].strip()[:100] # type: ignore
             except:
                 code_context = "<code context not available>"
-            print(f" {colored.Fore.rgb(100,100,100)}\\_> ...{inspect.stack()[1].filename[-20:]}:{inspect.stack()[1].lineno}   {code_context}{colored.Style.reset}")
+            #print(f" {colored.Fore.rgb(100,100,100)}\\_> ...{inspect.stack()[1].filename[-20:]}:{inspect.stack()[1].lineno}   {code_context}{colored.Style.reset}")
         return cls(**params)
 
     @final
