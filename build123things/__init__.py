@@ -398,6 +398,8 @@ class Thing (ABC, metaclass=ThingMeta):
                 return arg_name, arg_name[:fnd] if fnd > 0 else arg_name
             resolved_index = 0
             for origname, basename in map(arg_basename, kwargs.keys()):
+                if origname in ("__add", "__mul"):
+                    continue
                 while basename not in captured_param_list[resolved_index][1]:
                     resolved_index += 1
                     if resolved_index >= len(captured_param_list):
@@ -412,9 +414,17 @@ class Thing (ABC, metaclass=ThingMeta):
         if "self" in params:
             del params["self"]
         modified_lookup = set()
+        add_all:float = 0
+        mul_all:float = 1
         for name, value in kwargs.items():
             # TODO: If someone does both __add and __mul, then we have an undefined behavior - what gets evaluated first?
-            if name.endswith("__add"):
+            if name == "__add":
+                add_all = value
+                continue
+            elif name == "__mul":
+                mul_all = value
+                continue
+            elif name.endswith("__add"):
                 name = name[:-5]
                 assert name not in modified_lookup
                 modified_lookup.add(name)
@@ -429,6 +439,14 @@ class Thing (ABC, metaclass=ThingMeta):
                 modified_lookup.add(name)
                 assert name in params.keys()
             params[name] = value
+        if add_all != 0 and mul_all != 1:
+            raise ValueError("Don't know what to do.")
+        elif add_all != 0:
+            for name in params.keys():
+                params[name] += add_all
+        elif mul_all != 1:
+            for name in params.keys():
+                params[name] *= mul_all
         if "Thing.adjust" in DEBUG:
             print(f"{colored.Fore.cyan}{repr(self)}{colored.Style.reset} . {colored.Fore.light_green}adjust({colored.Fore.red}{kwargs}{colored.Fore.light_green}){colored.Style.reset} as {colored.Fore.red}{cls}{colored.Style.reset}")
             print(f" - new params: {colored.Fore.dark_green}{params}{colored.Style.reset}")
