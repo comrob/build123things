@@ -1,3 +1,5 @@
+More recent versions are currently maintained in https://github.com/zoulamar/build123things.
+
 #  The    B U I L D    1 2 3    T H I N G S    Library.
 
 This package contains an extension to the brilliant [build123d](https://github.com/gumyr/build123d), a Pythonic scripted-CAD system based on [Open CASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html).
